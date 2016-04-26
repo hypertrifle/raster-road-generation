@@ -1,7 +1,7 @@
 import luxe.States;
 import luxe.Input;
 import luxe.Text;
-import luxe.Sprite;
+import luxe.Entity;
 import luxe.Color;
 import luxe.Vector;
 import phoenix.Texture;
@@ -10,7 +10,7 @@ import components.*;
 
 class PlayState extends State {
 
-    var entity : Sprite;
+    var entity : Entity;
     var texture : Texture;
 
     public function new(_name:String) {
@@ -28,18 +28,14 @@ class PlayState extends State {
     override function onenter<T>(_value:T) {
         //entering this state
         
-        //load texture
-        if(texture == null) texture = Luxe.resources.texture('assets/player.png');
         //create an entity
-        entity = new Sprite({
+        entity = new Entity({
             name : 'road',
-            depth : 1,
-         //   texture : texture,
             pos : new Vector(0,0)
         }); //
 
         //add a component to an entity
-        entity.add(new DisplayComponent({name:'name'}));
+        entity.add(new RoadGenerationComponent({name:'road_gen'}));
 
 
     } //onenter
