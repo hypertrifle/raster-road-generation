@@ -19,7 +19,8 @@ class RoadGenerationComponent extends Component {
     private var playerZ:Float;
     private var position:Int = 0;                       // current camera Z position (add playerZ to get player's absolute Z position)
     private var playerX:Float = 0;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
-
+    private var rumbleLength:Float = 3;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
+    private var speed:Float = 4000;
 
     var width:Int;
     var height:Int;
@@ -56,7 +57,7 @@ class RoadGenerationComponent extends Component {
     	       index: n, //use this with the segments depth.
                p1: {world:{x:0,y:0,z:n*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
     	       p2: {world:{x:0,y:0,z:(n+1)*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
-    	       poly: initPoly()
+    	       poly: initPoly(n)
     	    });
     	  }
 
@@ -69,10 +70,10 @@ class RoadGenerationComponent extends Component {
 
     }
 
-    function initPoly():Geometry {
+    function initPoly(index:Int):Geometry {
     	return Luxe.draw.poly({
     	    solid : true,
-    	    color: new Color().rgb(0xff4b03),
+    	    color: (Math.floor(index/rumbleLength)%2 == 0) ? new Color().rgb(0xff4b03) : new Color().rgb(0xee4b03),
     	    points : [
     	        new Vector(0, 0),
     	        new Vector(0, 0),
@@ -97,9 +98,20 @@ class RoadGenerationComponent extends Component {
       return segments[Math.floor(z/segmentLength) % segments.length];
     }
 
+    function progressPosition(start:Float, increment:Float, max:Float):Int { // with looping
+        var result = start + increment;
+        while (result >= max)
+          result -= max;
+        while (result < 0)
+          result += max;
+        return Math.floor(result);
+      }
+
     override function update(dt:Float) {
         //called every frame for you
-        position += 1;
+        //position = Util.increase(position, dt * speed, trackLength);
+
+        position = progressPosition(position, dt * speed, trackLength);
 
         var baseSegment = findSegment(position);
         var maxy        = height;
@@ -109,8 +121,7 @@ class RoadGenerationComponent extends Component {
 
         for(n in 0...drawDistance) {
                segment = segments[(baseSegment.index + n) % segments.length];
-        	
-        	   segment.poly.visible = false;
+        	   //segment.poly.visible = false;
 
 
                segment.looped = (segment.index < baseSegment.index)? true : false;
@@ -119,7 +130,6 @@ class RoadGenerationComponent extends Component {
                
 
                if ((segment.p1.camera.z <= cameraDepth) || (segment.p2.screen.y >= maxy)) {
-               		trace("" + (segment.p1.camera.z <= cameraDepth) + " : "+ (segment.p2.screen.y >= maxy) );
                     continue; // clip by (already rendered) segment
                }   
 
