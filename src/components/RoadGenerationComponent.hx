@@ -45,31 +45,6 @@ class RoadGenerationComponent extends Component {
         initRoad();
     }
 
-    function initRoad() {
-    	segments = new Array<Segment>();
-
-    	//for(var n = 0 ; n < 500 ; n++) { // arbitrary road length
-    	for(n in 0...300){
-    	    segments.push({
-               looped: false,
-               fog: 1,
-    	       index: n, //use this with the segments depth.
-               p1: {world:{x:0,y:0,z:n*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
-    	       p2: {world:{x:0,y:0,z:(n+1)*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
-    	       backgroundPoly: initPoly(n,1),
-    	       roadPoly: initPoly(n,0)
-
-    	    });
-    	  }
-
-    	  trackLength = segments.length * segmentLength;
-
-
-
-
-        //renderSegment();
-
-    }
 
     function initPoly(index:Int,type:Int):Geometry {
     	var color:Color = null;
@@ -127,6 +102,10 @@ class RoadGenerationComponent extends Component {
         position = progressPosition(position, dt * speed, trackLength);
 
         var baseSegment = findSegment(position);
+        var basePercent = percentRemaining(position, Math.floor(segmentLength));
+        var dx = - (baseSegment.curve * basePercent);
+        var x  = 0;
+
         var maxy        = height;
         var segment:Segment;
 
@@ -139,14 +118,18 @@ class RoadGenerationComponent extends Component {
 
 
                segment.looped = (segment.index < baseSegment.index)? true : false;
-               segment.fog    = fog(n/drawDistance, fogDensity);
+               //segment.fog    = fog(n/drawDistance, fogDensity);
 
-               segment.p1 = project(segment.p1, (playerX * roadWidth), cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
-               segment.p2 = project(segment.p2, (playerX * roadWidth), cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
+               segment.p1 = project(segment.p1, (playerX * roadWidth) - x, cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
+               segment.p2 = project(segment.p2, (playerX * roadWidth) - x - dx, cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
                
+               x  += Math.floor(dx);
+               dx += segment.curve;
+
 
                if ((segment.p1.camera.z <= cameraDepth) || (segment.p2.screen.y >= maxy)) {
                     continue; // clip by (already rendered) segment
+                    return;
                }   
 
                updatedSegments ++;
@@ -185,6 +168,12 @@ class RoadGenerationComponent extends Component {
 
     function renderSegment(segment:Segment, width:Float){
         //trace("render segment");
+
+        if(Math.abs(segment.p1.screen.y - segment.p2.screen.y) < 1){
+        	trace("skipping small geometry");
+        	return;
+        }
+
         segment.roadPoly.visible = true;
         segment.backgroundPoly.visible = true;
         segment.roadPoly.color.a = segment.fog;
@@ -266,6 +255,88 @@ class RoadGenerationComponent extends Component {
     function movePoints(){
     	//ploy1.vertices[0].pos.x += 1;
     }
+
+    function initRoad() {
+    	segments = new Array<Segment>();
+
+    	//for(var n = 0 ; n < 500 ; n++) { // arbitrary road length
+    	addStraight(Math.floor(ROAD_LENGTH_SHORT/4));
+    	addSCurves();
+    	addStraight(ROAD_LENGTH_LONG);
+    	addCurve(ROAD_LENGTH_MEDIUM, ROAD_CURVE_MEDIUM);
+    	addCurve(ROAD_LENGTH_LONG, ROAD_CURVE_MEDIUM);
+    	addStraight(ROAD_LENGTH_MEDIUM);
+    	addSCurves();
+    	addCurve(ROAD_LENGTH_LONG, -ROAD_CURVE_MEDIUM);
+    	addCurve(ROAD_LENGTH_LONG, ROAD_CURVE_MEDIUM);
+    	addStraight(ROAD_LENGTH_MEDIUM);
+    	addSCurves();
+    	addCurve(ROAD_LENGTH_LONG, -ROAD_CURVE_EASY);
+
+
+    	  trackLength = segments.length * segmentLength;
+
+
+    }
+
+    function addSegment(curve:Float) {
+          var n = segments.length;
+          segments.push({
+	             looped: false,
+	             fog: 1,
+	             curve: curve,
+	  	       index: n, //use this with the segments depth.
+	             p1: {world:{x:0,y:0,z:n*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
+	  	       p2: {world:{x:0,y:0,z:(n+1)*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
+	  	       backgroundPoly: initPoly(n,1),
+	  	       roadPoly: initPoly(n,0)
+
+	  	    });
+        }
+
+   function addRoad(enter:Int, hold:Int, leave:Int, curve:Int) {
+        var n;
+        for(n in 0...enter)
+          addSegment(easeIn(0, curve, n/enter));
+        for(n in 0...hold)
+          addSegment(curve);
+        for(n in 0...leave)
+          addSegment(easeInOut(curve, 0, Math.floor(n/leave)));
+      }
+
+
+    function addStraight(num) {
+          addRoad(num, num, num, 0);
+    }
+
+    function addCurve(num, curve) {
+      addRoad(num, num, num, curve);
+    }
+        
+    function addSCurves() {
+      addRoad(ROAD_LENGTH_MEDIUM, ROAD_LENGTH_MEDIUM, ROAD_LENGTH_MEDIUM,  -ROAD_CURVE_EASY);
+      addRoad(ROAD_LENGTH_MEDIUM, ROAD_LENGTH_MEDIUM, ROAD_LENGTH_MEDIUM,   ROAD_CURVE_MEDIUM);
+      addRoad(ROAD_LENGTH_MEDIUM, ROAD_LENGTH_MEDIUM, ROAD_LENGTH_MEDIUM,   ROAD_CURVE_EASY);
+      addRoad(ROAD_LENGTH_MEDIUM, ROAD_LENGTH_MEDIUM, ROAD_LENGTH_MEDIUM,  -ROAD_CURVE_EASY);
+      addRoad(ROAD_LENGTH_MEDIUM, ROAD_LENGTH_MEDIUM, ROAD_LENGTH_MEDIUM,  -ROAD_CURVE_MEDIUM);
+    }
+
+
+
+    function easeIn(a,b,percent){ return a + (b-a)*Math.pow(percent,2);                           }
+    function easeOut(a,b,percent){ return a + (b-a)*(1-Math.pow(1-percent,2));                     }
+    function easeInOut(a,b,percent){ return a + (b-a)*((-Math.cos(percent*Math.PI)/2) + 0.5);        }
+    function percentRemaining(n, total)          { return (n%total)/total;                           }
+    public static inline var ROAD_LENGTH_NONE:Float = 0;
+    public static inline var ROAD_LENGTH_SHORT:Float = 25;
+    public static inline var ROAD_LENGTH_MEDIUM:Float = 50;
+    public static inline var ROAD_LENGTH_LONG:Float = 100;
+
+    public static inline var ROAD_CURVE_NONE:Float = 0;
+    public static inline var ROAD_CURVE_EASY:Float = 2;
+    public static inline var ROAD_CURVE_MEDIUM:Float = 4;
+    public static inline var ROAD_CURVE_HARD:Float = 6;
+
 }
 
 typedef Segment = {
@@ -276,6 +347,7 @@ typedef Segment = {
 	var backgroundPoly:Geometry;
     var looped:Bool;
     var fog:Float;
+    var curve:Float;
 }
 
 typedef SegmentPoint = {
@@ -291,3 +363,7 @@ typedef Coord = {
     var w:Float;
     var scale:Float;
 }
+
+
+
+
