@@ -20,7 +20,7 @@ class RoadGenerationComponent extends Component {
     private var position:Int = 0;                       // current camera Z position (add playerZ to get player's absolute Z position)
     private var playerX:Float = 0;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
     private var rumbleLength:Float = 3;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
-    private var speed:Float = 4000;
+    private var speed:Float = 12000;
     private var fogDensity:Float    = 5;                       // exponential fog density
     var width:Int;
     var height:Int;
@@ -67,7 +67,8 @@ class RoadGenerationComponent extends Component {
     	        new Vector(0, 0),
     	        new Vector(0, 0),
     	        new Vector(0, 0)
-    	    ]
+    	    ],
+    	    visible: false
     	});
     }
 
@@ -99,6 +100,12 @@ class RoadGenerationComponent extends Component {
         //called every frame for you
         //position = Util.increase(position, dt * speed, trackLength);
 
+        //clear visible segments
+        for(i in 0...segments.length){
+        	segments[i].roadPoly.visible = false;
+        	segments[i].backgroundPoly.visible = false;
+        }
+
         position = progressPosition(position, dt * speed, trackLength);
 
         var baseSegment = findSegment(position);
@@ -113,8 +120,8 @@ class RoadGenerationComponent extends Component {
 
         for(n in 0...drawDistance) {
                segment = segments[(baseSegment.index + n) % segments.length];
-        	   segment.roadPoly.visible = false;
-        	   segment.backgroundPoly.visible = false;
+        	   //segment.roadPoly.visible = false;
+        	   //segment.backgroundPoly.visible = false;
 
 
                segment.looped = (segment.index < baseSegment.index)? true : false;
