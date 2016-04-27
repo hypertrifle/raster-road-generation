@@ -21,13 +21,11 @@ class RoadGenerationComponent extends Component {
     private var playerX:Float = 0;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
     private var rumbleLength:Float = 3;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
     private var speed:Float = 4000;
-
+    private var fogDensity:Float    = 5;                       // exponential fog density
     var width:Int;
     var height:Int;
 
 	private var segments:Array<Segment>;
-
-	private var ploy1:Geometry;
 
     override function init() {
         width = Luxe.screen.w;
@@ -51,13 +49,16 @@ class RoadGenerationComponent extends Component {
     	segments = new Array<Segment>();
 
     	//for(var n = 0 ; n < 500 ; n++) { // arbitrary road length
-    	for(n in 0...500){
+    	for(n in 0...300){
     	    segments.push({
                looped: false,
+               fog: 1,
     	       index: n, //use this with the segments depth.
                p1: {world:{x:0,y:0,z:n*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
     	       p2: {world:{x:0,y:0,z:(n+1)*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
-    	       poly: initPoly(n)
+    	       backgroundPoly: initPoly(n,1),
+    	       roadPoly: initPoly(n,0)
+
     	    });
     	  }
 
@@ -70,10 +71,22 @@ class RoadGenerationComponent extends Component {
 
     }
 
-    function initPoly(index:Int):Geometry {
+    function initPoly(index:Int,type:Int):Geometry {
+    	var color:Color = null;
+    	if(type ==0){
+    		//road type
+    		color = (Math.floor(index/rumbleLength)%2 == 0) ? new Color().rgb(0xff4b03) : new Color().rgb(0xee4b03);
+		} else if(type ==1){
+			//background type
+			color = (Math.floor(index/rumbleLength)%2 == 0) ? new Color().rgb(0x21a01b) : new Color().rgb(0x21801b);
+
+
+
+		}
+
     	return Luxe.draw.poly({
     	    solid : true,
-    	    color: (Math.floor(index/rumbleLength)%2 == 0) ? new Color().rgb(0xff4b03) : new Color().rgb(0xee4b03),
+    	    color: color,
     	    points : [
     	        new Vector(0, 0),
     	        new Vector(0, 0),
@@ -121,10 +134,13 @@ class RoadGenerationComponent extends Component {
 
         for(n in 0...drawDistance) {
                segment = segments[(baseSegment.index + n) % segments.length];
-        	   //segment.poly.visible = false;
+        	   segment.roadPoly.visible = false;
+        	   segment.backgroundPoly.visible = false;
 
 
                segment.looped = (segment.index < baseSegment.index)? true : false;
+               segment.fog    = fog(n/drawDistance, fogDensity);
+
                segment.p1 = project(segment.p1, (playerX * roadWidth), cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
                segment.p2 = project(segment.p2, (playerX * roadWidth), cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
                
@@ -163,9 +179,17 @@ class RoadGenerationComponent extends Component {
         //trace("render complete: "+ updatedSegments);
     }
 
+    function fog(distance:Float, density:Float) { 
+    	return 1 / (Math.pow(2.71828, (distance * distance * density))); 
+    }
+
     function renderSegment(segment:Segment, width:Float){
         //trace("render segment");
-        segment.poly.visible = true;
+        segment.roadPoly.visible = true;
+        segment.backgroundPoly.visible = true;
+        segment.roadPoly.color.a = segment.fog;
+        segment.backgroundPoly.color.a = segment.fog;
+
         var x1:Float = segment.p1.screen.x;
         var y1:Float = segment.p1.screen.y;
         var w1:Float = segment.p1.screen.w;
@@ -173,17 +197,31 @@ class RoadGenerationComponent extends Component {
         var y2:Float = segment.p2.screen.y;
         var w2:Float = segment.p2.screen.w;
 
-        segment.poly.vertices[0].pos.x = x1-w1;
-        segment.poly.vertices[0].pos.y = y1;
+        segment.roadPoly.vertices[0].pos.x = x1-w1;
+        segment.roadPoly.vertices[0].pos.y = y1;
         
-        segment.poly.vertices[1].pos.x = x1+w1;
-        segment.poly.vertices[1].pos.y = y1;
+        segment.roadPoly.vertices[1].pos.x = x1+w1;
+        segment.roadPoly.vertices[1].pos.y = y1;
 
-        segment.poly.vertices[2].pos.x = x2+w2;
-        segment.poly.vertices[2].pos.y = y2;
+        segment.roadPoly.vertices[2].pos.x = x2+w2;
+        segment.roadPoly.vertices[2].pos.y = y2;
 
-        segment.poly.vertices[3].pos.x = x2-w2;
-        segment.poly.vertices[3].pos.y = y2;
+        segment.roadPoly.vertices[3].pos.x = x2-w2;
+        segment.roadPoly.vertices[3].pos.y = y2;
+
+
+
+        segment.backgroundPoly.vertices[0].pos.x = 0;
+        segment.backgroundPoly.vertices[0].pos.y = y1;
+
+        segment.backgroundPoly.vertices[1].pos.x = Luxe.screen.width;
+        segment.backgroundPoly.vertices[1].pos.y = y1;
+
+        segment.backgroundPoly.vertices[2].pos.x = Luxe.screen.width;
+        segment.backgroundPoly.vertices[2].pos.y = y2;
+
+        segment.backgroundPoly.vertices[3].pos.x = 0;
+        segment.backgroundPoly.vertices[3].pos.y = y2;
 
 
     }
@@ -200,10 +238,10 @@ class RoadGenerationComponent extends Component {
         ctx.fillStyle = color.grass;
         ctx.fillRect(0, y2, width, y1 - y2);
         
-        Render.polygon(ctx, x1-w1-r1, y1, x1-w1, y1, x2-w2, y2, x2-w2-r2, y2, color.rumble);
-        Render.polygon(ctx, x1+w1+r1, y1, x1+w1, y1, x2+w2, y2, x2+w2+r2, y2, color.rumble);
+        Render.roadPolygon(ctx, x1-w1-r1, y1, x1-w1, y1, x2-w2, y2, x2-w2-r2, y2, color.rumble);
+        Render.roadPolygon(ctx, x1+w1+r1, y1, x1+w1, y1, x2+w2, y2, x2+w2+r2, y2, color.rumble);
 
-        Render.polygon(ctx, x1-w1,    y1, x1+w1, y1, x2+w2, y2, x2-w2,    y2, color.road);
+        Render.roadPolygon(ctx, x1-w1,    y1, x1+w1, y1, x2+w2, y2, x2-w2,    y2, color.road);
         
         if (color.lane) {
           lanew1 = w1*2/lanes;
@@ -211,7 +249,7 @@ class RoadGenerationComponent extends Component {
           lanex1 = x1 - w1 + lanew1;
           lanex2 = x2 - w2 + lanew2;
           for(lane = 1 ; lane < lanes ; lanex1 += lanew1, lanex2 += lanew2, lane++)
-            Render.polygon(ctx, lanex1 - l1/2, y1, lanex1 + l1/2, y1, lanex2 + l2/2, y2, lanex2 - l2/2, y2, color.lane);
+            Render.roadPolygon(ctx, lanex1 - l1/2, y1, lanex1 + l1/2, y1, lanex2 + l2/2, y2, lanex2 - l2/2, y2, color.lane);
         }
         
         Render.fog(ctx, 0, y1, width, y2-y1, fog);
@@ -234,8 +272,10 @@ typedef Segment = {
 	var p1:SegmentPoint;
 	var p2:SegmentPoint;
 	var index:Int;
-	var poly:Geometry;
+	var roadPoly:Geometry;
+	var backgroundPoly:Geometry;
     var looped:Bool;
+    var fog:Float;
 }
 
 typedef SegmentPoint = {
