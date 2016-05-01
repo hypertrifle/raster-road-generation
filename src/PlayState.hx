@@ -36,6 +36,7 @@ class PlayState extends State {
 
         //add a component to an entity
         entity.add(new RoadGenerationComponent({name:'road_gen'}));
+        entity.add(new RoadRenderingComponent({name:'road_render'}));
 
 
     } //onenter

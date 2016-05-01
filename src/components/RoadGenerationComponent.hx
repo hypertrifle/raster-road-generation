@@ -8,19 +8,19 @@ import com.hypertrifle.*;
 
 class RoadGenerationComponent extends Component {
 
-	private var segmentLength:Float = 200;
+	private var segmentLength:Float = 300;
 	private var trackLength:Float = -1;
 	private var roadWidth:Float = 2000;
-	private var fieldOfView:Float   = 100;                     // angle (degrees) for field of view
+	private var fieldOfView:Float   = 150;                     // angle (degrees) for field of view
 	private var cameraHeight:Float  = 1000;                    // z height of camera
 	private var cameraDepth:Float   = -1;                    // z distance camera is from screen (computed)
-	private var drawDistance:Int = 500;
+	private var drawDistance:Int = 700;
 	private var postion:Float = 0;
 	private var resolution:Float;
 	private var playerZ:Float;
     private var position:Int = 0;                       // current camera Z position (add playerZ to get player's absolute Z position)
     private var playerX:Float = 0;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
-    private var rumbleLength:Float = 3;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
+    public var rumbleLength:Float = 1;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
     private var speed:Float = 12000;
     private var fogDensity:Float    = 5;                       // exponential fog density
     var width:Int;
@@ -28,9 +28,6 @@ class RoadGenerationComponent extends Component {
 
 
     private var segments:Array<Segment>;
-    private var geometries:Array<Geos>;
-
-    private var geomertyPoolSize:Int = 100;
 
     override function init() {
     	width = Luxe.screen.w;
@@ -38,41 +35,6 @@ class RoadGenerationComponent extends Component {
 
     }
 
-    function initPolies(){
-    	geometries = new Array<Geos>();
-    	for(i in 0...geomertyPoolSize){
-    		geometries.push({
-    			backgroundPoly: initPoly(i,1),
-    			roadPoly: initPoly(i,0)
-    			});
-    	}
-    }
-
-
-    function initPoly(index:Int,type:Int):Geometry {
-    	var color:Color = null;
-    	if(type ==0){
-    		//road type
-    		color = new Color().rgb(0xff4b03);
-    		} else if(type ==1){
-			//background type
-			color = new Color().rgb(0x21a01b);
-
-
-		}
-
-		return Luxe.draw.poly({
-			solid : true,
-			color: color,
-			points : [
-				new Vector(0, 0),
-				new Vector(Luxe.screen.width, 0),
-				new Vector(Luxe.screen.width, 0),
-				new Vector(0, 0)
-			],
-			visible: false
-		});
-	}
 
 	function project(p:SegmentPoint, cameraX:Float, cameraY:Float, cameraZ:Float, cameraDepth:Float, width:Float, height:Float, roadWidth:Float) {
 		p.camera.x     = p.world.x - cameraX;
@@ -91,12 +53,6 @@ class RoadGenerationComponent extends Component {
 
 
     override function update(dt:Float) {
-
-        //clear visible segments
-        for(n in 0...geometries.length){
-        	geometries[n].roadPoly.visible = false;
-        	geometries[n].backgroundPoly.visible = false;
-        }
 
 
         // progress through level
@@ -117,6 +73,8 @@ class RoadGenerationComponent extends Component {
         var segment:Segment;
 
         var updatedSegments:Int =0;
+
+        this.entity.get('road_render').clearRenderer();
 
         for(n in 0...drawDistance) {
         	//get first segment
@@ -143,7 +101,7 @@ class RoadGenerationComponent extends Component {
 			}   
 
 			updatedSegments ++;
-			renderSegment(segment,width,n);
+			this.entity.get('road_render').renderSegment(segment,width,n);
 			maxy = Math.floor(segment.p2.screen.y);
         }
     }
@@ -152,52 +110,6 @@ class RoadGenerationComponent extends Component {
     	return 1 / (Math.pow(2.71828, (distance * distance * density))); 
     }
 
-    function renderSegment(segmentIn:Segment, width:Float, index:Int){
-
-    	if(index >= geometries.length){
-    		return; //run out of availible polys
-    	}
-
-    	//set these geos to visible
-    	var geomerty = geometries[index];
-    	geomerty.roadPoly.visible = true;
-    	geomerty.backgroundPoly.visible = true;
-
-    	//set the coulours
-    	geomerty.roadPoly.color = (Math.floor(segmentIn.index/rumbleLength)%2 == 0) ? new Color().rgb(0x0f5848) : new Color().rgb(0x0f4838);
-    	geomerty.backgroundPoly.color = (Math.floor(segmentIn.index/rumbleLength)%2 == 0) ? new Color().rgb(0x00da76) : new Color().rgb(0x00ca66);
-
-    	//set alpha based on fog value
-    	geomerty.roadPoly.color.a = segmentIn.fog;
-    	geomerty.backgroundPoly.color.a = segmentIn.fog;
-
-
-    	var x1:Float = segmentIn.p1.screen.x;
-    	var y1:Float = segmentIn.p1.screen.y;
-    	var w1:Float = segmentIn.p1.screen.w;
-    	var x2:Float = segmentIn.p2.screen.x;
-    	var y2:Float = segmentIn.p2.screen.y;
-    	var w2:Float = segmentIn.p2.screen.w;
-
-    	geomerty.roadPoly.vertices[0].pos.x = x1-w1;
-    	geomerty.roadPoly.vertices[0].pos.y = y1;
-
-    	geomerty.roadPoly.vertices[1].pos.x = x1+w1;
-    	geomerty.roadPoly.vertices[1].pos.y = y1;
-
-    	geomerty.roadPoly.vertices[2].pos.x = x2+w2;
-    	geomerty.roadPoly.vertices[2].pos.y = y2;
-
-    	geomerty.roadPoly.vertices[3].pos.x = x2-w2;
-    	geomerty.roadPoly.vertices[3].pos.y = y2;
-
-
-    	//set background
-    	for(i in 0...4){
-    		geomerty.backgroundPoly.vertices[i].pos.y = (i <2) ? y1: y2;
-    	}
-
-    }
 
 
     override function onreset() {
@@ -208,7 +120,6 @@ class RoadGenerationComponent extends Component {
         resolution             = height/480;
 
         initRoad();
-        initPolies();
 
     }
 
@@ -267,11 +178,6 @@ typedef Segment = {
 	var curve:Float;
 }
 
-//Geos - these contain the geometries for rendering one band.
-typedef Geos = {
-	var roadPoly:Geometry;
-	var backgroundPoly:Geometry;
-}
 
 //used to calculate the projection of the track.
 typedef SegmentPoint = {
