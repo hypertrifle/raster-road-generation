@@ -36,19 +36,6 @@ class RoadGenerationComponent extends Component {
     	width = Luxe.screen.w;
     	height = Luxe.screen.h;
 
-        //called when initialising the component
-        reset();
-
-    }
-
-    function reset(){
-    	trace("reset game");
-    	cameraDepth            = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
-    	playerZ                = (cameraHeight * cameraDepth);
-    	resolution             = height/480;
-
-    	initRoad();
-    	initPolies();
     }
 
     function initPolies(){
@@ -79,8 +66,8 @@ class RoadGenerationComponent extends Component {
 			color: color,
 			points : [
 				new Vector(0, 0),
-				new Vector(0, 0),
-				new Vector(0, 0),
+				new Vector(Luxe.screen.width, 0),
+				new Vector(Luxe.screen.width, 0),
 				new Vector(0, 0)
 			],
 			visible: false
@@ -112,9 +99,10 @@ class RoadGenerationComponent extends Component {
         }
 
 
-
+        // progress through level
         position = HTUtil.incrementWithWrap(position, dt * speed, trackLength);
 
+        //get the current segment the player is on and 
         var baseSegment = findSegment(position);
         var basePercent = HTUtil.percentRemaining(position, Math.floor(segmentLength));
         var playerSegment = findSegment(Math.floor(position+playerZ));
@@ -126,26 +114,23 @@ class RoadGenerationComponent extends Component {
         var dx = - (baseSegment.curve * basePercent);
         var x  = 0;
 
-
-
-
-
-        var maxy = height;
         var segment:Segment;
 
         var updatedSegments:Int =0;
 
         for(n in 0...drawDistance) {
-
+        	//get first segment
         	segment = segments[(baseSegment.index + n) % segments.length];
 
         	
         	segment.looped = (segment.index < baseSegment.index)? true : false;
 			segment.fog    = fog(n/drawDistance, fogDensity);
 
+			// project our points
 			segment.p1 = project(segment.p1, (playerX * roadWidth) - x, playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
 			segment.p2 = project(segment.p2, (playerX * roadWidth) - x - dx, playerY + cameraHeight, position - (segment.looped ? trackLength : 0), cameraDepth, width, height, roadWidth);
 
+			//
 			x  += Math.floor(dx);
 			dx += segment.curve;
 
@@ -154,15 +139,13 @@ class RoadGenerationComponent extends Component {
             (segment.p2.screen.y >= segment.p1.screen.y) || // back face cull
             (segment.p2.screen.y >= maxy)) {
 			    continue; // clip by (already rendered) segment
-			    return;
+			    //return;
 			}   
 
 			updatedSegments ++;
 			renderSegment(segment,width,n);
 			maxy = Math.floor(segment.p2.screen.y);
-
-
-            }
+        }
     }
 
     function fog(distance:Float, density:Float) { 
@@ -175,14 +158,16 @@ class RoadGenerationComponent extends Component {
     		return; //run out of availible polys
     	}
 
+    	//set these geos to visible
     	var geomerty = geometries[index];
     	geomerty.roadPoly.visible = true;
     	geomerty.backgroundPoly.visible = true;
 
-
+    	//set the coulours
     	geomerty.roadPoly.color = (Math.floor(segmentIn.index/rumbleLength)%2 == 0) ? new Color().rgb(0x0f5848) : new Color().rgb(0x0f4838);
     	geomerty.backgroundPoly.color = (Math.floor(segmentIn.index/rumbleLength)%2 == 0) ? new Color().rgb(0x00da76) : new Color().rgb(0x00ca66);
 
+    	//set alpha based on fog value
     	geomerty.roadPoly.color.a = segmentIn.fog;
     	geomerty.backgroundPoly.color.a = segmentIn.fog;
 
@@ -207,33 +192,25 @@ class RoadGenerationComponent extends Component {
     	geomerty.roadPoly.vertices[3].pos.y = y2;
 
 
-
-    	geomerty.backgroundPoly.vertices[0].pos.x = 0;
-    	geomerty.backgroundPoly.vertices[0].pos.y = y1;
-
-    	geomerty.backgroundPoly.vertices[1].pos.x = Luxe.screen.width;
-    	geomerty.backgroundPoly.vertices[1].pos.y = y1;
-
-    	geomerty.backgroundPoly.vertices[2].pos.x = Luxe.screen.width;
-    	geomerty.backgroundPoly.vertices[2].pos.y = y2;
-
-    	geomerty.backgroundPoly.vertices[3].pos.x = 0;
-    	geomerty.backgroundPoly.vertices[3].pos.y = y2;
-
+    	//set background
+    	for(i in 0...4){
+    		geomerty.backgroundPoly.vertices[i].pos.y = (i <2) ? y1: y2;
+    	}
 
     }
 
 
     override function onreset() {
         //called when the scene starts or restarts
+        trace("reset road gen component");
+        cameraDepth            = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
+        playerZ                = (cameraHeight * cameraDepth);
+        resolution             = height/480;
+
+        initRoad();
+        initPolies();
+
     }
-
-    function clearRender(){
-    	Luxe.renderer.clear(new Color().rgb(0x008800));
-    }
-
-   
-
 
     function initRoad() {
     	segments = new Array<Segment>();
@@ -262,7 +239,7 @@ class RoadGenerationComponent extends Component {
   	       	index: n,
             p1: {world:{x:0,y:lastSegmentY(),z:n*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
   	        p2: {world:{x:0,y:y,z:(n+1)*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
-  	       });
+  	    });
 	}
 
 	function addRoad(enter:Int, hold:Int, leave:Int, curve:Int, y:Int) {
@@ -271,28 +248,12 @@ class RoadGenerationComponent extends Component {
 		var n;
 		var total = enter + hold + leave;
 		for(n in 0...enter)
-		addSegment(HTUtil.easeIn(0, curve, n/enter), HTUtil.easeInOut(Math.floor(startY), Math.floor(endY), n/total));
+			addSegment(HTUtil.easeIn(0, curve, n/enter), HTUtil.easeInOut(Math.floor(startY), Math.floor(endY), n/total));
 		for(n in 0...hold)
-		addSegment(curve, HTUtil.easeInOut(startY, endY, (enter+n)/total));
+			addSegment(curve, HTUtil.easeInOut(startY, endY, (enter+n)/total));
 		for(n in 0...leave)
-		addSegment(HTUtil.easeInOut(curve, 0, Math.floor(n/leave)),  HTUtil.easeInOut(startY, endY, (enter+hold+n)/total));
+			addSegment(HTUtil.easeInOut(curve, 0, Math.floor(n/leave)),  HTUtil.easeInOut(startY, endY, (enter+hold+n)/total));
 	}
-
-
-
-
-	function addStraight(num) {
-		addRoad(num, num, num, 0,0);
-	}
-
-	function addCurve(num, curve) {
-		addRoad(num, num, num, curve,0);
-	}
-
-	function addHill(num, height) {
-	      addRoad(num, num, num, 0, height);
-    }
-
 }
 
 

@@ -11,13 +11,13 @@
   },
 
   project : {
-    name : 'course',
+    name : 'course_gen',
     version : '0.0.1',
-    author : 'course',
+    author : 'Rich Searle',
 
     app : {
       name : 'luxe_empty',
-      package : 'com.Rich Searle.course'
+      package : 'com.hypertrifle.course'
     },
 
     build : {
