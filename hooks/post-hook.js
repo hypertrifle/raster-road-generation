@@ -6,7 +6,7 @@ var exec = require('child_process').exec;
 
 console.log = function(d) { //
   log_file.write(util.format(d) + '\n');
-  //log_stdout.write(util.format(d) + '\n');
+  //log_stdout.write(util.format(d) + '\n'); //for when debugging scripts (outputs with flow --log 3).
 };
 
 function save(error, stdout, stderr) { console.log(stdout) }

@@ -2,3 +2,4 @@ bin
 android.project
 .DS_Store
 logs/*.log
+!logs/last-build-haxelib.log
