@@ -42,6 +42,7 @@ class RoadRenderingComponent extends Component {
 		shader = Luxe.resources.shader('road_shader');
 		texture = Luxe.resources.texture('assets/testgrid.png');
 		var res = new Vector(Luxe.screen.width,Luxe.screen.height);
+		shader.set_texture("tex0",texture);
 		shader.set_vector2("resolution",res);
 		shader.set_float("time",shaderTime);
 		//shader.shader.set('resolution', current_time);
@@ -70,7 +71,7 @@ class RoadRenderingComponent extends Component {
 		    });
 		}
 
-		//batcher.shader = shader;
+		batcher.shader = shader;
 
 		initPolies();
 

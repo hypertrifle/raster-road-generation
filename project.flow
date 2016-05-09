@@ -25,11 +25,22 @@
         luxe : '*',
       },
 
-      post : {
-           name : 'log-haxelib-version',
-           desc : 'will save a log of the current installed haxelib versions on successful build',
-           script : 'hooks/log-haxelib-versions.js',
+      // post : {
+      //      name : 'log-haxelib-version',
+      //      desc : 'will save a log of the current installed haxelib versions on successful build',
+      //      script : 'hooks/log-haxelib-versions.js',
+      //  }
+       post : {
+         name : 'post-shell-hook',
+         desc : 'just runs post-hook.sh and logs the output to the logs folder.',
+         script : 'hooks/post-hook.js',
+       },
+       pre : {
+         name : 'pre-shell-hook',
+         desc : 'just runs pre-hook.sh and logs the output to the logs folder.',
+         script : 'hooks/pre-hook.js',
        }
+       
     },
 
     files : {

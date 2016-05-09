@@ -21,7 +21,7 @@ float rand(vec2 co)
 
 void main() {
 
-	   vec4 texcolor = texture2D(tex0, tcoord);
-	   gl_FragColor = color * texcolor;
+	   //vec4 texcolor = texture2D(tex0, tcoord);
+	   gl_FragColor = color;// * texcolor;
 }
 
