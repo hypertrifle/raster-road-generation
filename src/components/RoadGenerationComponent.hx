@@ -11,7 +11,7 @@ class RoadGenerationComponent extends Component {
 	private var segmentLength:Float = 300;
 	private var trackLength:Float = -1;
 	private var roadWidth:Float = 2000;
-	private var fieldOfView:Float   = 150;                     // angle (degrees) for field of view
+	private var fieldOfView:Float   = 120;                     // angle (degrees) for field of view
 	private var cameraHeight:Float  = 1000;                    // z height of camera
 	private var cameraDepth:Float   = -1;                    // z distance camera is from screen (computed)
 	private var drawDistance:Int = 700;
@@ -20,11 +20,14 @@ class RoadGenerationComponent extends Component {
 	private var playerZ:Float;
     private var position:Int = 0;                       // current camera Z position (add playerZ to get player's absolute Z position)
     private var playerX:Float = 0;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
-    public var rumbleLength:Float = 1;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
+    public var rumbleLength:Float = 5;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
     private var speed:Float = 12000;
     private var fogDensity:Float    = 5;                       // exponential fog density
     var width:Int;
     var height:Int;
+
+
+    public var segmentsToRender:Array<Segment>;
 
 
     private var segments:Array<Segment>;
@@ -76,6 +79,8 @@ class RoadGenerationComponent extends Component {
 
         this.entity.get('road_render').clearRenderer();
 
+        //segmentsToRender = segmentsToRender.splice(0,0);
+
         for(n in 0...drawDistance) {
         	//get first segment
         	segment = segments[(baseSegment.index + n) % segments.length];
@@ -101,6 +106,8 @@ class RoadGenerationComponent extends Component {
 			}   
 
 			updatedSegments ++;
+			segment.n = n;
+			//segmentsToRender.push(segment);
 			this.entity.get('road_render').renderSegment(segment,width,n);
 			maxy = Math.floor(segment.p2.screen.y);
         }
@@ -115,7 +122,7 @@ class RoadGenerationComponent extends Component {
     override function onreset() {
         //called when the scene starts or restarts
         trace("reset road gen component");
-        cameraDepth            = 1 / Math.tan((fieldOfView/2) * Math.PI/180);
+        setFov(fieldOfView);
         playerZ                = (cameraHeight * cameraDepth);
         resolution             = height/480;
 
@@ -123,8 +130,16 @@ class RoadGenerationComponent extends Component {
 
     }
 
+    public function setFov(newValue:Float):Float{
+    	fieldOfView = newValue;
+    	cameraDepth= 1 / Math.tan((fieldOfView/2) * Math.PI/180);
+    	return fieldOfView;
+
+    }
+
     function initRoad() {
     	segments = new Array<Segment>();
+    	segmentsToRender = new Array<Segment>();
     	//lets just generate a random road, this could be done with a seed?
 		for(i in 0...100){ 
 			addRoad(HTUtil.randomInt(100),HTUtil.randomInt(100), HTUtil.randomInt(100), HTUtil.randomInt(20)-10, HTUtil.randomInt(150)-75);
@@ -150,6 +165,7 @@ class RoadGenerationComponent extends Component {
   	       	index: n,
             p1: {world:{x:0,y:lastSegmentY(),z:n*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
   	        p2: {world:{x:0,y:y,z:(n+1)*segmentLength,w:0,scale:0},camera:{x:0,y:0,z:0,w:0,scale:0},screen:{x:0,y:0,z:0,w:0,scale:0}}, //n   *segmentLength,
+  	    	n:0
   	    });
 	}
 
@@ -176,6 +192,7 @@ typedef Segment = {
 	var looped:Bool;
 	var fog:Float;
 	var curve:Float;
+	var n:Int;
 }
 
 

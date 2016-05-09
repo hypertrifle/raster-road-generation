@@ -12,6 +12,8 @@ class PlayState extends State {
 
     var entity : Entity;
     var texture : Texture;
+    var fov:Float = 150;
+    var roadGen:RoadGenerationComponent;
 
     public function new(_name:String) {
 
@@ -35,7 +37,7 @@ class PlayState extends State {
         }); //
 
         //add a component to an entity
-        entity.add(new RoadGenerationComponent({name:'road_gen'}));
+        roadGen = entity.add(new RoadGenerationComponent({name:'road_gen'}));
         entity.add(new RoadRenderingComponent({name:'road_render'}));
 
 
@@ -48,6 +50,15 @@ class PlayState extends State {
 
     override function onkeyup(e:KeyEvent) {
         //machine.set('play_state');
+
+        if(e.keycode == Key.key_q) {
+            fov += 10;
+            roadGen.setFov(fov);
+        } else if (fov > 150) {
+            fov -= 10;
+            roadGen.setFov(fov);
+
+        }
     }
 
     override function update(dt:Float) {

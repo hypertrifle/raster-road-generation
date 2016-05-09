@@ -23,7 +23,13 @@
     build : {
       dependencies : {
         luxe : '*',
-      }
+      },
+
+      post : {
+           name : 'log-haxelib-version',
+           desc : 'will save a log of the current installed haxelib versions on successful build',
+           script : 'hooks/log-haxelib-versions.js',
+       }
     },
 
     files : {

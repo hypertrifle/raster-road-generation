@@ -10,10 +10,12 @@ class Main extends luxe.Game {
 
 	public static var machine : States;
 
-	override function config( config:luxe.AppConfig ) {
+	override function config( config:luxe.GameConfig ) {
 
-	    //config.preload.textures.push({ id:'assets/image.png' });
+	    config.preload.textures.push({ id:'assets/test.png' });
+	    config.preload.textures.push({ id:'assets/testgrid.png' });
 	    //config.preload.texts.push({ id:'assets/text.json' });
+	    config.preload.shaders.push({ id:'road_shader', frag_id:'assets/road.glsl', vert_id:'default' });
 
 
 	    return config;
@@ -22,6 +24,9 @@ class Main extends luxe.Game {
 
 
     override function ready() {
+
+    	Luxe.renderer.clear_color.rgb(0xb1a4ff);
+
     	connect_input();
     	machine = new States({ name:'statemachine' });
     	machine.add(new PlayState('play_state'));

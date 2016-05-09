@@ -6,6 +6,13 @@ import luxe.Color;
 import phoenix.geometry.*;
 import com.hypertrifle.*;
 import components.RoadGenerationComponent;
+import phoenix.Batcher;
+import phoenix.Texture;
+import phoenix.Camera;
+import phoenix.Vector;
+import phoenix.Shader;
+
+
 
 //Geos - these contain the geometries for rendering one band.
 typedef Geos = {
@@ -17,12 +24,59 @@ typedef Geos = {
 class RoadRenderingComponent extends Component {
 
 	private var geometries:Array<Geos>;
-	private var geomertyPoolSize:Int = 150;
-	private var rumbleLength:Float = 1;                       // player x offset from center of road (-1 to 1 to stay independent of roadWidth)
+	private var geomertyPoolSize:Int = 100;
+	private var rumbleLength:Float = 1;   
+	private var batcher:Batcher;
+	private var camera:Camera;
+	private var maxPolies:Int = 0;
+	private var shader:Shader;
+	private var shaderTime:Float = 0;
+
+	private var texture:Texture;
+
+	private var _testPoly:Geometry;
+
 
 	override function init() {
-		initPolies();
+
+		shader = Luxe.resources.shader('road_shader');
+		texture = Luxe.resources.texture('assets/testgrid.png');
+		var res = new Vector(Luxe.screen.width,Luxe.screen.height);
+		shader.set_vector2("resolution",res);
+		shader.set_float("time",shaderTime);
+		//shader.shader.set('resolution', current_time);
+		
 		rumbleLength = this.entity.get("road_gen").rumbleLength;
+
+		//create a hud camera
+		camera = new Camera({
+		    camera_name: 'hud_camera',
+		});
+
+
+		for(b in Luxe.renderer.batchers){
+		    if(b.name == 'road_batcher'){
+		        trace('found road_batcher');
+		        batcher = b;
+		    }
+		}
+		if(batcher == null){
+		    trace('couldnt find road_batcher' );
+		    batcher = Luxe.renderer.create_batcher({
+		        name : 'road_batcher',
+		        layer : 5,
+		        no_add : false,
+		        camera: camera,
+		    });
+		}
+
+		//batcher.shader = shader;
+
+		initPolies();
+
+
+		//_testPoly = initPoly(0,0);
+		//_testPoly.visible = true;
 
 	}
 
@@ -55,20 +109,40 @@ class RoadRenderingComponent extends Component {
 			points : [
 				new Vector(0, 0),
 				new Vector(Luxe.screen.width, 0),
-				new Vector(Luxe.screen.width, 0),
-				new Vector(0, 0)
+				new Vector(Luxe.screen.width, Luxe.screen.height),
+				new Vector(0, Luxe.screen.height)
 			],
-			visible: false
+			visible: false,
+			batcher: batcher
+			//texture: texture
+			//shader: shader
 		});
 	}
 
 	override function update(dt:Float) {
+		shaderTime += dt;
+		shader.set_float("time",shaderTime);
 
+	   //render(dt);
+	   /*if(batcher.visible_count > maxPolies){
+	   	trace(maxPolies = batcher.visible_count);
+	   }*/
+
+	}
+
+	function render(dt:Float) {
+
+		var segments:Array<Segment> = this.entity.get("road_gen").segmentsToRender;
+
+		for(i in 0...segments.length){
+			this.renderSegment(segments[i],Luxe.screen.width,segments[i].n);
+		}
 	   
 
 	}
 
 	public function clearRenderer(){
+		//return;
 		//clear visible segments
 		for(n in 0...geometries.length){
 			geometries[n].roadPoly.visible = false;
@@ -77,7 +151,7 @@ class RoadRenderingComponent extends Component {
 	}
 
 	function renderSegment(segmentIn:Segment, width:Float, index:Int){
-
+		//return;
 		if(index >= geometries.length){
 			return; //run out of availible polys
 		}
@@ -88,8 +162,8 @@ class RoadRenderingComponent extends Component {
 		geomerty.backgroundPoly.visible = true;
 
 		//set the coulours
-		geomerty.roadPoly.color = (Math.floor(segmentIn.index/rumbleLength)%2 == 0) ? new Color().rgb(0x0f5848) : new Color().rgb(0x0f4838);
-		geomerty.backgroundPoly.color = (Math.floor(segmentIn.index/rumbleLength)%2 == 0) ? new Color().rgb(0x00da76) : new Color().rgb(0x00ca66);
+		geomerty.backgroundPoly.color = (Math.floor(segmentIn.index/rumbleLength)%2 == 0) ? new Color().rgb(0x39c7a5) : new Color().rgb(0x2cb493);
+		geomerty.roadPoly.color = (Math.floor(segmentIn.index/rumbleLength)%2 == 0) ? new Color().rgb(0xb144d1) : new Color().rgb(0xa166dc);
 
 		//set alpha based on fog value
 		geomerty.roadPoly.color.a = segmentIn.fog;
